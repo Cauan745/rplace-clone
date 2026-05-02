@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="r/place clone – collaborative pixel canvas" />
+  <title>r/place</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- ─── Top bar ─── -->
+  <header id="topbar">
+    <div class="topbar-left">
+      <span class="logo">r/place</span>
+    </div>
+    <div class="topbar-center" id="coords">( — , — )</div>
+    <div class="topbar-right">
+      <span class="zoom-badge" id="zoom-badge">1.0×</span>
+    </div>
+  </header>
+
+  <!-- ─── Canvas viewport ─── -->
+  <main id="viewport">
+    <canvas id="canvas"></canvas>
+    <!-- Hover highlight rendered separately so it never blends -->
+    <canvas id="cursor-canvas"></canvas>
+  </main>
+
+  <!-- ─── Color palette ─── -->
+  <footer id="palette-bar">
+    <div id="palette" role="radiogroup" aria-label="Color palette"></div>
+  </footer>
+  
+  <script type="importmap">
+    {
+      "imports": {
+        "@stomp/stompjs": "https://ga.jspm.io/npm:@stomp/stompjs@7.0.0/esm6/index.js"
+      }
+    }
+  </script>
+  <script
+    async
+    src="https://ga.jspm.io/npm:es-module-shims@1.5.1/dist/es-module-shims.js"
+    crossorigin="anonymous"
+  ></script>
+  <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+  <script type="module" src="rplace.js"></script>
+</body>
+</html>
