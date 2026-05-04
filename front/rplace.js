@@ -162,11 +162,18 @@ const RPlace = (() => {
   function loadGrid(grid2d) {
     _ensureBooted();
     rows = grid2d.length;
-    cols = grid2d[0].length;
+    // Each row may be a plain array, a Uint8Array, or an object { pixels: [...] }
+    const firstRow = grid2d[0];
+    const extractRow = (row) =>
+      row instanceof Uint8Array ? row
+      : Array.isArray(row) ? row
+      : (row && Array.isArray(row.pixels)) ? row.pixels
+      : row;
+    cols = extractRow(firstRow).length;
     grid = [];
     for (let y = 0; y < rows; y++) {
-      const row = grid2d[y];
-      grid[y] = row instanceof Uint8Array ? row : new Uint8Array(row);
+      const raw = extractRow(grid2d[y]);
+      grid[y] = raw instanceof Uint8Array ? raw : new Uint8Array(raw);
     }
     _rebuildImageData();
     _centerCamera();
@@ -713,17 +720,17 @@ const RPlace = (() => {
 
   // Log pixel placements to console (replace with your gRPC call)
   RPlace.onPixelPlace((x, y, color) => {
-    console.log(`Pixel placed vai tomar no cu porra: (${x}, ${y}) → color ${color}`); 
+    console.log(`Pixel placed vai tomar no cu porra: (${x}, ${y}) → color ${color}`);
 
-    jsonRequest = JSON.stringify({x, y, color})
+    jsonRequest = JSON.stringify({ x, y, color })
 
     console.log(jsonRequest)
 
     fetch("http://localhost:8080/", {
-      method: "POST", 
+      method: "POST",
       headers: {
         "Content-Type": "application/json", // Tell the server you're sending JSON
-      }, 
+      },
       body: jsonRequest
     }
     ).then((res) => res.text()).then((res) => {
@@ -734,28 +741,48 @@ const RPlace = (() => {
   });
 });
 
-( () => {
+(() => {
+
+  console.log("heru")
+
   const socket = new SockJS('http://localhost:8080/canvas'); // Make sure your port is correct
   const stompClient = Stomp.over(socket);
 
+  console.error("Misera")
   stompClient.connect({}, (frame) => {
-      console.log('Connected: ' + frame);
-      
-      // 1. Subscribe to the public broadcast for live updates
-      stompClient.subscribe('/topic/update', (message) => {
-        const {x,y,color} = JSON.parse(message.body)
-        
-        RPlace.setPixel(x, y, color)
-      });
+    console.log('Connected merda: ' + frame);
 
-      // 2. Subscribe to the initialization endpoint to get your welcome message/data
-      stompClient.subscribe('/app/init', (message) => {
-        const canvas = JSON.parse(message.body)
-        RPlace.loadGrid(canvas)
-      });
+    // 1. Subscribe to the public broadcast for live updates
+    console.error("Porra porra")
+    stompClient.subscribe('/topic/update', (message) => {
+      console.log(message.body)
+      const { x, y, color } = JSON.parse(message.body)
+
+      RPlace.setPixel(x, y, color)
+    });
+
+    // 2. Subscribe to the initialization endpoint to get your welcome message/data
+    console.error("SADASDASDASDSADASDASD")
+    stompClient.subscribe('/app/init', (message) => {
+      console.error("Salve meu mano!");
+      console.log("Raw payload:", message.body);
+
+      try {
+        // 1. Parse the string back into a JavaScript object
+        const canvasData = JSON.parse(message.body);
+
+        // 2. Pass the actual 2D array to your renderer. 
+        // If your gRPC object was named Canvas and had a 'grid' field, 
+        // you need to pass canvasData.grid, not the whole object!
+        RPlace.loadGrid(canvasData.grid || canvasData);
+
+      } catch (error) {
+        console.error("Failed to load grid data:", error);
+      }
+    });
   });
 
-  RPlace.onPixelPlace((x,y,color) => {
-    stompClient.send("/app/placePixel", {}, JSON.stringify({x,y,color}))
+  RPlace.onPixelPlace((x, y, color) => {
+    stompClient.send("/app/placePixel", {}, JSON.stringify({ x, y, color }))
   })
 })()

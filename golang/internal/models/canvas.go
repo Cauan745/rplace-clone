@@ -8,6 +8,7 @@ import (
 	"os"
 	"sync"
 
+	"rplace_teste/internal/grpc"
 	"rplace_teste/internal/models/colors"
 )
 
@@ -15,24 +16,33 @@ type Canvas struct {
 	ColorCount int
 	Size       int
 	mux        sync.Mutex
-	Canvas     [50][50]int8 // 0 means empty
+	Canvas     []*grpc.Row // 0 means empty
 }
 
-func New() *Canvas {
+func New(size int) *Canvas {
+	grid := make([]*grpc.Row, size)
+
+	for i := range grid {
+		grid[i] = &grpc.Row{
+			Pixels: make([]uint32, size),
+		}
+	}
+
 	return &Canvas{
 		ColorCount: colors.ColorCount,
-		Size:       50,
+		Size:       size,
+		Canvas:     grid,
 	}
 }
 
-func (c *Canvas) AddPixel(color int8, x int, y int) {
+func (c *Canvas) AddPixel(color uint32, x int, y int) {
 	if !c.isValidCoodinate(x) || !c.isValidCoodinate(y) {
 		log.Println("Invalid coordinate:", x, "or", y)
 		return
 	}
 
 	c.mux.Lock()
-	c.Canvas[y][x] = color
+	c.Canvas[y].Pixels[x] = color
 	c.mux.Unlock()
 }
 
@@ -62,7 +72,7 @@ func (c *Canvas) SaveToPNG(filename string) error {
 	// 3. Loop through your [y][x] array and paint the pixels
 	for y := 0; y < height; y++ {
 		for x := 0; x < width; x++ {
-			pixelValue := c.Canvas[y][x]
+			pixelValue := c.Canvas[y].Pixels[x]
 
 			// Map the integer to the actual color
 			switch pixelValue {

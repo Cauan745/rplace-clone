@@ -20,10 +20,10 @@ message Pixel {
 message PlacePixelResponse {}
 
 message Row {
-  repeated uint32 color = 1;
+  repeated uint32 pixels = 1;
 }
 
 message Canvas {
   repeated Row grid = 1;
-  string size = 2;
+  int32 size = 2;
 }

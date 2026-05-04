@@ -1,23 +1,44 @@
 package main
 
 import (
-	"net/http"
+	"log"
+	"net"
 
 	"rplace_teste/internal/handlers"
 	"rplace_teste/internal/models"
-	"rplace_teste/internal/usecases"
+
+	gr "rplace_teste/internal/grpc"
+
+	"google.golang.org/grpc"
 )
 
 func main() {
-	canvas := models.New()
-	handlers := handlers.New(canvas)
+	canvas := models.New(50)
+	// handlers := handlers.New(canvas)
+	//
+	// server := http.NewServeMux()
+	//
+	// usecases.DrawSquare(canvas)
+	//
+	// server.HandleFunc("GET /", handlers.GetCanvas)
+	// server.HandleFunc("POST /", handlers.PlacePixel)
+	//
+	// http.ListenAndServe(":8000", server)
 
-	server := http.NewServeMux()
+	// setup a listener on port 9001
+	lis, err := net.Listen("tcp", ":9001")
+	if err != nil {
+		log.Fatalf("failed to listen: %v", err)
+	}
 
-	usecases.DrawSquare(canvas)
+	// create a new grpc server
+	grpcServer := grpc.NewServer()
 
-	server.HandleFunc("GET /", handlers.GetCanvas)
-	server.HandleFunc("POST /", handlers.PlacePixel)
+	// register our server struct as a handle for the CoffeeShopService rpc calls that come in through grpcServer
+	gr.RegisterCanvasServiceServer(grpcServer, handlers.New(canvas))
 
-	http.ListenAndServe(":8000", server)
+	// Serve traffic
+	if err := grpcServer.Serve(lis); err != nil {
+		log.Fatalf("failed to serve: %s", err)
+	}
 }
