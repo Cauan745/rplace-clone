@@ -59,6 +59,8 @@ public class CanvasController {
     //
     // String result =
     // restClient.get().uri("http://localhost:8000").retrieve().body(String.class);
+    //
+    System.out.println("Novo usuário conectado");
 
     rplace_clone.Rplace.Canvas result = grpcClient.getCanvas();
 
