@@ -1,0 +1,1 @@
+tmux new-window \; send-keys "cd golang && go run cmd/main/main.go" Enter \; split-window -h \; send-keys "cd spring && mvn spring-boot:run" Enter \; split-window -v \; send-keys "cd front && python3 -m http.server 8765" Enter

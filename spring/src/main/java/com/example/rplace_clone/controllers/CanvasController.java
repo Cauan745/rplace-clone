@@ -47,7 +47,7 @@ public class CanvasController {
 
     var result = grpcClient.placePixel(pixel);
 
-    System.out.println(result);
+    // System.out.println(result);
 
     return pixel;
   }
@@ -66,7 +66,7 @@ public class CanvasController {
 
     try {
       String jsonString = JsonFormat.printer().print(result);
-      System.out.println(jsonString);
+      // System.out.println(jsonString);
       return jsonString;
     } catch (Exception e) {
       // TODO: handle exception

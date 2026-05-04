@@ -2,13 +2,9 @@ package handlers
 
 import (
 	"context"
-	"fmt"
 
 	"rplace_teste/internal/grpc"
 	"rplace_teste/internal/models"
-
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 type Handlers struct {
@@ -29,13 +25,13 @@ func (h *Handlers) GetCanvas(context context.Context, request *grpc.GetCanvasReq
 		Size: int32(h.Canvas.Size),
 	}
 
-	fmt.Println(h.Canvas.Canvas[0].Pixels)
-
-	fmt.Println(protoCanvas)
-
 	return protoCanvas, nil
 }
 
 func (h *Handlers) PlacePixel(context context.Context, pixel *grpc.Pixel) (*grpc.PlacePixelResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method PlacePixel not implemented")
+	h.Canvas.Canvas[pixel.Y].Pixels[pixel.X] = uint32(pixel.Color)
+
+	response := &grpc.PlacePixelResponse{}
+
+	return response, nil
 }
