@@ -13,20 +13,12 @@ import (
 )
 
 func main() {
-	canvas := models.New(50)
-	// handlers := handlers.New(canvas)
-	//
-	// server := http.NewServeMux()
-	//
-	// usecases.DrawSquare(canvas)
-	//
-	// server.HandleFunc("GET /", handlers.GetCanvas)
-	// server.HandleFunc("POST /", handlers.PlacePixel)
-	//
-	// http.ListenAndServe(":8000", server)
+	const PORT = ":9001"
+
+	canvas := models.New(100)
 
 	// setup a listener on port 9001
-	lis, err := net.Listen("tcp", ":9001")
+	lis, err := net.Listen("tcp", PORT)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
@@ -34,8 +26,10 @@ func main() {
 	// create a new grpc server
 	grpcServer := grpc.NewServer()
 
-	// register our server struct as a handle for the CoffeeShopService rpc calls that come in through grpcServer
+	// register our server struct as a handle for the CanvasService rpc calls that come in through grpcServer
 	gr.RegisterCanvasServiceServer(grpcServer, handlers.New(canvas))
+
+	log.Println("gRPC server listening on port", PORT)
 
 	// Serve traffic
 	if err := grpcServer.Serve(lis); err != nil {

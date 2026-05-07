@@ -8,6 +8,7 @@ import com.example.rplace_clone.dto.PixelDTO;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import rplace_clone.CanvasServiceGrpc;
+import rplace_clone.CanvasServiceGrpc.CanvasServiceBlockingStub;
 import rplace_clone.Rplace.Canvas;
 import rplace_clone.Rplace.GetCanvasRequest;
 import rplace_clone.Rplace.Pixel;
@@ -15,7 +16,7 @@ import rplace_clone.Rplace.PlacePixelResponse;
 
 @Service
 public class GrpcClient {
-  private final CanvasServiceGrpc.CanvasServiceBlockingStub blockingStub;
+  private final CanvasServiceBlockingStub blockingStub;
 
   public GrpcClient() {
     ManagedChannel channel = ManagedChannelBuilder.forAddress("localhost", 9001)

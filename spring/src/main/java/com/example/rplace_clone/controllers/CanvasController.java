@@ -1,16 +1,16 @@
 
 package com.example.rplace_clone.controllers;
 
-import java.util.HashMap;
-import java.util.Map;
-
-import org.springframework.http.MediaType;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.messaging.simp.annotation.SubscribeMapping;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.client.RestClient;
+
+import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.util.JsonFormat;
+
+import io.grpc.StatusRuntimeException;
+import rplace_clone.Rplace.Canvas;
 
 import com.example.rplace_clone.dto.PixelDTO;
 
@@ -29,53 +29,36 @@ public class CanvasController {
 
     System.out.println("Pixel Placed");
 
-    // RestClient restClient = RestClient.create();
-    //
-    // Map<String, Object> data = new HashMap<>();
-    // data.put("color", pixel.color());
-    // data.put("x", pixel.x());
-    // data.put("y", pixel.y());
-    //
-    // System.out.println(data);
-    //
-    // String result = restClient.post()
-    // .uri("http://localhost:8000")
-    // .contentType(MediaType.APPLICATION_JSON)
-    // .body(data)
-    // .retrieve()
-    // .body(String.class);
-
-    var result = grpcClient.placePixel(pixel);
-
-    // System.out.println(result);
-
-    return pixel;
-  }
-
-  // NEW: Triggers exactly when a client subscribes to /app/init
-  @SubscribeMapping("/init")
-  public String sendInitialState() {
-    // RestClient restClient = RestClient.create();
-    //
-    // String result =
-    // restClient.get().uri("http://localhost:8000").retrieve().body(String.class);
-    //
-    System.out.println("Novo usuário conectado");
-
-    rplace_clone.Rplace.Canvas result = grpcClient.getCanvas();
-
-    System.out.println("canvas pegado");
-
     try {
-      String jsonString = JsonFormat.printer().print(result);
-      // System.out.println(jsonString);
-      return jsonString;
-    } catch (Exception e) {
-      // TODO: handle exception
+      grpcClient.placePixel(pixel);
+      return pixel;
+    } catch (StatusRuntimeException e) {
+      System.out.println("Erro ao comunicar com servidor gRPC");
+      return null;
     }
 
-    // System.out.println(result);
+  }
 
-    return "";
+  @SubscribeMapping("/init")
+  public String sendInitialState() {
+
+    System.out.println("Novo usuário conectado");
+    try {
+      Canvas result = grpcClient.getCanvas();
+
+      System.out.println("Canvas pegado");
+
+      String jsonString = JsonFormat.printer().print(result);
+      return jsonString;
+
+    } catch (InvalidProtocolBufferException e) {
+      System.out.println("Erro ao formatar protobuf para JSON");
+      return null;
+
+    } catch (StatusRuntimeException e) {
+      System.out.println("Erro ao comunicar com servidor gRPC");
+      return null;
+    }
+
   }
 }

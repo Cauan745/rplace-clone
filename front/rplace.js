@@ -166,9 +166,9 @@ const RPlace = (() => {
     const firstRow = grid2d[0];
     const extractRow = (row) =>
       row instanceof Uint8Array ? row
-      : Array.isArray(row) ? row
-      : (row && Array.isArray(row.pixels)) ? row.pixels
-      : row;
+        : Array.isArray(row) ? row
+          : (row && Array.isArray(row.pixels)) ? row.pixels
+            : row;
     cols = extractRow(firstRow).length;
     grid = [];
     for (let y = 0; y < rows; y++) {
@@ -743,29 +743,19 @@ const RPlace = (() => {
 
 (() => {
 
-  console.log("heru")
 
-  const socket = new SockJS('http://localhost:8080/canvas'); // Make sure your port is correct
+
+  const SERVER_URL = 'http://localhost:8080/canvas'
+
+  const socket = new SockJS(SERVER_URL); // Make sure your port is correct
   const stompClient = Stomp.over(socket);
 
-  console.error("Misera")
+  console.log("Conectando na url: " + SERVER_URL)
   stompClient.connect({}, (frame) => {
-    console.log('Connected merda: ' + frame);
 
-    // 1. Subscribe to the public broadcast for live updates
-    console.error("Porra porra")
-    stompClient.subscribe('/topic/update', (message) => {
-      console.log(message.body)
-      const { x, y, color } = JSON.parse(message.body)
-
-      RPlace.setPixel(x, y, color)
-    });
-
-    // 2. Subscribe to the initialization endpoint to get your welcome message/data
-    console.error("SADASDASDASDSADASDASD")
+    // 1. Subscribe to the initialization endpoint to get your welcome message/data
     stompClient.subscribe('/app/init', (message) => {
-      console.error("Salve meu mano!");
-      console.log("Raw payload:", message.body);
+      console.log("Getting Canvas...");
 
       try {
         // 1. Parse the string back into a JavaScript object
@@ -780,6 +770,15 @@ const RPlace = (() => {
         console.error("Failed to load grid data:", error);
       }
     });
+
+    // 2. Subscribe to the public broadcast for live updates 
+    stompClient.subscribe('/topic/update', (message) => {
+      console.log("Pixel Update Received")
+      const { x, y, color } = JSON.parse(message.body)
+
+      RPlace.setPixel(x, y, color)
+    });
+
   });
 
   RPlace.onPixelPlace((x, y, color) => {

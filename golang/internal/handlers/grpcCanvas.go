@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"log"
 
 	"rplace_teste/internal/grpc"
 	"rplace_teste/internal/models"
@@ -20,6 +21,8 @@ func New(c *models.Canvas) *Handlers {
 }
 
 func (h *Handlers) GetCanvas(context context.Context, request *grpc.GetCanvasRequest) (*grpc.Canvas, error) {
+	log.Println("Get canvas request received")
+
 	protoCanvas := &grpc.Canvas{
 		Grid: h.Canvas.Canvas,
 		Size: int32(h.Canvas.Size),
@@ -29,7 +32,13 @@ func (h *Handlers) GetCanvas(context context.Context, request *grpc.GetCanvasReq
 }
 
 func (h *Handlers) PlacePixel(context context.Context, pixel *grpc.Pixel) (*grpc.PlacePixelResponse, error) {
-	h.Canvas.Canvas[pixel.Y].Pixels[pixel.X] = uint32(pixel.Color)
+	log.Println("Place pixel request received")
+
+	err := h.Canvas.AddPixel(uint32(pixel.Color), int(pixel.X), int(pixel.Y))
+	if err != nil {
+		log.Println("Error", err)
+		return nil, err
+	}
 
 	response := &grpc.PlacePixelResponse{}
 
