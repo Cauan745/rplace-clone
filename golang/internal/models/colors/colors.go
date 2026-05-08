@@ -5,7 +5,7 @@ var ColorCount int
 func GetColors() map[string]int {
 	colorMap := make(map[string]int)
 
-	// 0 means no color
+	// 0 = vazio
 	colorMap["red"] = 1
 	colorMap["orange"] = 2
 	colorMap["yellow"] = 3

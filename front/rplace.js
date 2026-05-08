@@ -14,6 +14,9 @@ import { Stomp } from '@stomp/stompjs';
  * ║  RPlace.onPixelPlace(callback)    – user placed a pixel ║
  * ║  RPlace.clearCallbacks()          – remove listeners     ║
  * ║  RPlace.setCooldown(ms)           – set cooldown timer   ║
+ * ║  RPlace.startCooldown(ms?)        – start/restart timer  ║
+ * ║  RPlace.getCooldownRemaining()    – ms left (0 = ready)  ║
+ * ║  RPlace.isOnCooldown()            – boolean              ║
  * ║  RPlace.setSelectedColor(idx)     – select palette color ║
  * ║  RPlace.getSelectedColor()        – current color index  ║
  * ╚═══════════════════════════════════════════════════════════╝
@@ -89,8 +92,9 @@ const RPlace = (() => {
   let hoverY = -1;
 
   // Cooldown
-  let cooldownMs = 0;
-  let lastPlaceTime = 0;
+  let cooldownMs = 10000;     // default 5s, override with setCooldown()
+  let cooldownEndTime = 0;   // timestamp when cooldown expires
+  let cooldownTimerId = null;
 
   // Callbacks
   const placeCallbacks = [];
@@ -118,6 +122,7 @@ const RPlace = (() => {
     cursorCtx = cursorCanvas.getContext("2d");
 
     _buildPaletteUI();
+    _buildCooldownUI();
     _attachEvents();
     _resize();
     window.addEventListener("resize", _resize);
@@ -231,7 +236,46 @@ const RPlace = (() => {
 
   /** Set the cooldown between pixel placements (ms). 0 = no cooldown. */
   function setCooldown(ms) {
-    cooldownMs = ms;
+    cooldownMs = Math.max(0, ms);
+  }
+
+  /**
+   * Start (or restart) the cooldown timer.
+   * Call this after the server confirms a pixel placement,
+   * or when the server tells you to wait.
+   *
+   * @param {number} [ms]  – override duration (uses setCooldown value if omitted)
+   *
+   * Usage from your networking code:
+   *   // After server confirms pixel:
+   *   RPlace.startCooldown();
+   *
+   *   // If server says "wait 10s":
+   *   RPlace.startCooldown(10000);
+   *
+   *   // If server sends the exact timestamp when you can place again:
+   *   const remaining = serverUnlockTimestamp - Date.now();
+   *   RPlace.startCooldown(remaining);
+   */
+  function startCooldown(ms) {
+    const duration = (ms != null && ms > 0) ? ms : cooldownMs;
+    if (duration <= 0) return;
+    cooldownEndTime = Date.now() + duration;
+    _startCooldownTick();
+  }
+
+  /**
+   * Get milliseconds remaining on the cooldown. Returns 0 when ready.
+   * Useful for syncing with backend or displaying custom UI.
+   */
+  function getCooldownRemaining() {
+    const remaining = cooldownEndTime - Date.now();
+    return remaining > 0 ? remaining : 0;
+  }
+
+  /** Check if the user is currently on cooldown. */
+  function isOnCooldown() {
+    return Date.now() < cooldownEndTime;
   }
 
   /** Programmatically select a palette color (1-31). */
@@ -523,14 +567,15 @@ const RPlace = (() => {
 
       if (cx < 0 || cy < 0 || cx >= cols || cy >= rows) return;
 
-      // Cooldown check
-      if (cooldownMs > 0) {
-        const now = Date.now();
-        if (now - lastPlaceTime < cooldownMs) return;
-        lastPlaceTime = now;
-      }
+      // Cooldown check — block placement if timer is active
+      if (isOnCooldown()) return;
 
       setPixel(cx, cy, selectedColor);
+
+      // Start the cooldown timer immediately (optimistic).
+      // If your backend controls the cooldown, remove this line
+      // and call RPlace.startCooldown() from your server response instead.
+      if (cooldownMs > 0) startCooldown();
 
       // Notify listeners
       for (const cb of placeCallbacks) {
@@ -596,9 +641,9 @@ const RPlace = (() => {
         const my = t.clientY - rect.top;
         const { cx, cy } = _screenToCell(mx, my);
         if (cx >= 0 && cy >= 0 && cx < cols && cy < rows && grid) {
-          if (cooldownMs <= 0 || Date.now() - lastPlaceTime >= cooldownMs) {
-            lastPlaceTime = Date.now();
+          if (!isOnCooldown()) {
             setPixel(cx, cy, selectedColor);
+            if (cooldownMs > 0) startCooldown();
             for (const cb of placeCallbacks) {
               try { cb(cx, cy, selectedColor); } catch (_) { }
             }
@@ -643,6 +688,76 @@ const RPlace = (() => {
   }
 
   /* ════════════════════════════════════════════════════════
+     COOLDOWN TIMER UI
+     ════════════════════════════════════════════════════════ */
+
+  function _buildCooldownUI() {
+    const bar = document.getElementById("palette-bar");
+
+    // Container for the cooldown overlay
+    const overlay = document.createElement("div");
+    overlay.id = "cooldown-overlay";
+    overlay.innerHTML = `
+      <div class="cooldown-content">
+        <div class="cooldown-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <polyline points="12 6 12 12 16 14"/>
+          </svg>
+        </div>
+        <span class="cooldown-text" id="cooldown-text">0:00</span>
+        <div class="cooldown-progress-track">
+          <div class="cooldown-progress-fill" id="cooldown-progress"></div>
+        </div>
+      </div>
+    `;
+    bar.appendChild(overlay);
+  }
+
+  /** Start the visual countdown tick. */
+  function _startCooldownTick() {
+    if (cooldownTimerId) clearInterval(cooldownTimerId);
+
+    const overlay = document.getElementById("cooldown-overlay");
+    const textEl = document.getElementById("cooldown-text");
+    const fillEl = document.getElementById("cooldown-progress");
+    if (!overlay) return;
+
+    const totalDuration = cooldownEndTime - Date.now();
+    overlay.classList.add("active");
+    document.getElementById("palette").classList.add("cooldown-active");
+
+    const tick = () => {
+      const remaining = cooldownEndTime - Date.now();
+      if (remaining <= 0) {
+        // Cooldown finished
+        clearInterval(cooldownTimerId);
+        cooldownTimerId = null;
+        overlay.classList.remove("active");
+        overlay.classList.add("ready-flash");
+        document.getElementById("palette").classList.remove("cooldown-active");
+        textEl.textContent = "Ready!";
+        fillEl.style.width = "100%";
+        setTimeout(() => overlay.classList.remove("ready-flash"), 600);
+        return;
+      }
+
+      const secs = Math.ceil(remaining / 1000);
+      const mins = Math.floor(secs / 60);
+      const s = secs % 60;
+      textEl.textContent = mins > 0
+        ? `${mins}:${String(s).padStart(2, "0")}`
+        : `0:${String(s).padStart(2, "0")}`;
+
+      const progress = 1 - (remaining / totalDuration);
+      fillEl.style.width = `${(progress * 100).toFixed(1)}%`;
+    };
+
+    tick(); // immediate first tick
+    cooldownTimerId = setInterval(tick, 50); // smooth updates
+  }
+
+  /* ════════════════════════════════════════════════════════
      HUD UPDATES
      ════════════════════════════════════════════════════════ */
 
@@ -680,100 +795,42 @@ const RPlace = (() => {
     onPixelPlace,
     clearCallbacks,
     setCooldown,
+    startCooldown,
+    getCooldownRemaining,
+    isOnCooldown,
     setSelectedColor,
     getSelectedColor,
     PALETTE,        // expose palette for reference
   };
 })();
 
-/* ═══════════════════════════════════════════════════════════
-   DEMO – Remove this block once you hook up your server.
-   It creates a 100×100 grid with some random pixels so you
-   can see the canvas working immediately.
-   ═══════════════════════════════════════════════════════════ */
 (() => {
-  const DEMO_SIZE = 1000;
-  RPlace.init(DEMO_SIZE, DEMO_SIZE);
-
-  // Scatter some random pixels
-  for (let i = 0; i < 2000; i++) {
-    const x = Math.floor(Math.random() * DEMO_SIZE);
-    const y = Math.floor(Math.random() * DEMO_SIZE);
-    const c = Math.floor(Math.random() * 31) + 1;   // 1-31
-    RPlace.setPixel(x, y, c);
-  }
-
-  // Log pixel placements to console (replace with your gRPC call)
-  RPlace.onPixelPlace((x, y, color) => {
-    console.log(`Pixel placed: (${x}, ${y}) → color ${color}`);
-  });
-}); // Not executing
-
-
-(() => {
-
-  fetch("http://localhost:8080/").then((res) => res.text()).then((res) => {
-    const array2D = JSON.parse(res);
-    RPlace.loadGrid(array2D)
-  })
-
-
-  // Log pixel placements to console (replace with your gRPC call)
-  RPlace.onPixelPlace((x, y, color) => {
-    console.log(`Pixel placed vai tomar no cu porra: (${x}, ${y}) → color ${color}`);
-
-    jsonRequest = JSON.stringify({ x, y, color })
-
-    console.log(jsonRequest)
-
-    fetch("http://localhost:8080/", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json", // Tell the server you're sending JSON
-      },
-      body: jsonRequest
-    }
-    ).then((res) => res.text()).then((res) => {
-      console.log(res)
-    })
-
-
-  });
-});
-
-(() => {
-
-
 
   const SERVER_URL = 'http://localhost:8080/canvas'
 
-  const socket = new SockJS(SERVER_URL); // Make sure your port is correct
+  const socket = new SockJS(SERVER_URL);
   const stompClient = Stomp.over(socket);
 
   console.log("Conectando na url: " + SERVER_URL)
   stompClient.connect({}, (frame) => {
 
-    // 1. Subscribe to the initialization endpoint to get your welcome message/data
+    // Recebe o canvas inicial 
     stompClient.subscribe('/app/init', (message) => {
-      console.log("Getting Canvas...");
+      console.log("Pegando Canvas");
 
       try {
-        // 1. Parse the string back into a JavaScript object
         const canvasData = JSON.parse(message.body);
 
-        // 2. Pass the actual 2D array to your renderer. 
-        // If your gRPC object was named Canvas and had a 'grid' field, 
-        // you need to pass canvasData.grid, not the whole object!
-        RPlace.loadGrid(canvasData.grid || canvasData);
+        RPlace.loadGrid(canvasData.grid);
 
       } catch (error) {
-        console.error("Failed to load grid data:", error);
+        console.error("Falha ao carregar canvas:", error);
       }
     });
 
-    // 2. Subscribe to the public broadcast for live updates 
+    // Receber pixeis colocados pelos outros usuários 
     stompClient.subscribe('/topic/update', (message) => {
-      console.log("Pixel Update Received")
+      console.log("Pixel recebido")
       const { x, y, color } = JSON.parse(message.body)
 
       RPlace.setPixel(x, y, color)

@@ -13,6 +13,7 @@ import io.grpc.StatusRuntimeException;
 import rplace_clone.Rplace.Canvas;
 
 import com.example.rplace_clone.dto.PixelDTO;
+import com.example.rplace_clone.services.GrpcClient;
 
 @Controller
 public class CanvasController {
@@ -27,7 +28,7 @@ public class CanvasController {
   @SendTo("/topic/update")
   public PixelDTO placePixel(PixelDTO pixel) {
 
-    System.out.println("Pixel Placed");
+    System.out.println("Pixel colocado");
 
     try {
       grpcClient.placePixel(pixel);

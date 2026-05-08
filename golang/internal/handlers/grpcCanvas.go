@@ -21,7 +21,7 @@ func New(c *models.Canvas) *Handlers {
 }
 
 func (h *Handlers) GetCanvas(context context.Context, request *grpc.GetCanvasRequest) (*grpc.Canvas, error) {
-	log.Println("Get canvas request received")
+	log.Println("Requisição GetCanvas recebida")
 
 	protoCanvas := &grpc.Canvas{
 		Grid: h.Canvas.Canvas,
@@ -32,8 +32,7 @@ func (h *Handlers) GetCanvas(context context.Context, request *grpc.GetCanvasReq
 }
 
 func (h *Handlers) PlacePixel(context context.Context, pixel *grpc.Pixel) (*grpc.PlacePixelResponse, error) {
-	log.Println("Place pixel request received")
-
+	log.Println("Requisição PlacePixel recebida")
 	err := h.Canvas.AddPixel(uint32(pixel.Color), int(pixel.X), int(pixel.Y))
 	if err != nil {
 		log.Println("Error", err)

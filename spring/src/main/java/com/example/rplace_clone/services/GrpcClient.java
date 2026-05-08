@@ -1,5 +1,5 @@
 
-package com.example.rplace_clone.controllers;
+package com.example.rplace_clone.services;
 
 import org.springframework.stereotype.Service;
 

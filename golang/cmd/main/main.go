@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"log"
 	"net"
 
@@ -15,24 +16,26 @@ import (
 func main() {
 	const PORT = ":9001"
 
-	canvas := models.New(100)
+	canvasSize := flag.Int("size", 50, "canvas size")
+	flag.Parse()
 
-	// setup a listener on port 9001
+	log.Println("Criando canvas de tamanho:", *canvasSize)
+
+	canvas := models.New(*canvasSize)
+
+	// criar listener na porta 9001
 	lis, err := net.Listen("tcp", PORT)
 	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
+		log.Fatalf("falha no listen: %v", err)
 	}
 
-	// create a new grpc server
 	grpcServer := grpc.NewServer()
 
-	// register our server struct as a handle for the CanvasService rpc calls that come in through grpcServer
 	gr.RegisterCanvasServiceServer(grpcServer, handlers.New(canvas))
 
-	log.Println("gRPC server listening on port", PORT)
+	log.Println("servidor gRPC listening na porta", PORT)
 
-	// Serve traffic
 	if err := grpcServer.Serve(lis); err != nil {
-		log.Fatalf("failed to serve: %s", err)
+		log.Fatalf("falha ao servir: %s", err)
 	}
 }

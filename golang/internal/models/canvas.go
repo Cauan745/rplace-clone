@@ -12,7 +12,7 @@ type Canvas struct {
 	ColorCount int
 	Size       int
 	mux        sync.Mutex
-	Canvas     []*grpc.Row // 0 means empty
+	Canvas     []*grpc.Row // 0 = vazio
 }
 
 func New(size int) *Canvas {
@@ -33,7 +33,7 @@ func New(size int) *Canvas {
 
 func (c *Canvas) AddPixel(color uint32, x int, y int) error {
 	if !c.isValidCoodinate(x) || !c.isValidCoodinate(y) {
-		return fmt.Errorf("invalid coordinate: %d or %d", x, y)
+		return fmt.Errorf("coordenada inválida: %d ou %d", x, y)
 	}
 
 	c.mux.Lock()
