@@ -1,23 +1,41 @@
 package main
 
 import (
-	"net/http"
+	"flag"
+	"log"
+	"net"
 
 	"rplace_teste/internal/handlers"
 	"rplace_teste/internal/models"
-	"rplace_teste/internal/usecases"
+
+	gr "rplace_teste/internal/grpc"
+
+	"google.golang.org/grpc"
 )
 
 func main() {
-	canvas := models.New()
-	handlers := handlers.New(canvas)
+	const PORT = ":9001"
 
-	server := http.NewServeMux()
+	canvasSize := flag.Int("size", 50, "canvas size")
+	flag.Parse()
 
-	usecases.DrawSquare(canvas)
+	log.Println("Criando canvas de tamanho:", *canvasSize)
 
-	server.HandleFunc("GET /", handlers.GetCanvas)
-	server.HandleFunc("POST /", handlers.PlacePixel)
+	canvas := models.New(*canvasSize)
 
-	http.ListenAndServe(":8000", server)
+	// criar listener na porta 9001
+	lis, err := net.Listen("tcp", PORT)
+	if err != nil {
+		log.Fatalf("falha no listen: %v", err)
+	}
+
+	grpcServer := grpc.NewServer()
+
+	gr.RegisterCanvasServiceServer(grpcServer, handlers.New(canvas))
+
+	log.Println("servidor gRPC listening na porta", PORT)
+
+	if err := grpcServer.Serve(lis); err != nil {
+		log.Fatalf("falha ao servir: %s", err)
+	}
 }

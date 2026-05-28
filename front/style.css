@@ -167,6 +167,96 @@ html, body {
 }
 
 /* ──────────────────────────────────────────────
+   Cooldown overlay
+   ────────────────────────────────────────────── */
+#cooldown-overlay {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(22, 33, 62, 0.92);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 10;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(100%);
+  transition: opacity 0.35s ease, transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+#cooldown-overlay.active {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+#cooldown-overlay.ready-flash {
+  opacity: 1;
+  transform: translateY(0);
+  animation: cooldown-flash 0.6s ease forwards;
+}
+
+@keyframes cooldown-flash {
+  0%   { background: rgba(0, 204, 120, 0.35); }
+  100% { background: rgba(22, 33, 62, 0);  opacity: 0; transform: translateY(100%); }
+}
+
+.cooldown-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 24px;
+}
+
+.cooldown-icon {
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  animation: cooldown-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes cooldown-pulse {
+  0%, 100% { opacity: 0.7; transform: scale(1); }
+  50%      { opacity: 1;   transform: scale(1.1); }
+}
+
+.cooldown-text {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 1px;
+  min-width: 50px;
+  text-align: center;
+}
+
+.cooldown-progress-track {
+  width: 120px;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.cooldown-progress-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--accent), #ff7eb3);
+  transition: width 0.08s linear;
+  box-shadow: 0 0 8px rgba(233, 69, 96, 0.4);
+}
+
+/* Dim palette swatches during cooldown */
+#palette.cooldown-active .palette-swatch {
+  opacity: 0.35;
+  pointer-events: none;
+  filter: grayscale(0.6);
+  transition: opacity 0.3s ease, filter 0.3s ease;
+}
+
+/* ──────────────────────────────────────────────
    Scrollbar (hidden)
    ────────────────────────────────────────────── */
 ::-webkit-scrollbar { display: none; }

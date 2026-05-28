@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package rplace_clone;
+
+option go_package = "./grpc";
+
+service CanvasService {
+  rpc GetCanvas(GetCanvasRequest) returns (Canvas);
+  rpc PlacePixel(Pixel) returns (PlacePixelResponse);
+}
+
+message GetCanvasRequest {}
+
+message Pixel {
+  int32 color = 1;
+  int32 x = 2;
+  int32 y = 3;
+}
+
+message PlacePixelResponse {}
+
+message Row {
+  repeated uint32 pixels = 1;
+}
+
+message Canvas {
+  repeated Row grid = 1;
+  int32 size = 2;
+}
